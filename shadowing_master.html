@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shadowing Master - Aprenda Falando</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+        }
+        .mic-pulse {
+            animation: pulse-ring 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 15px rgba(59, 130, 246, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+        .word-match { color: #16a34a; font-weight: 600; }
+        .word-miss { color: #dc2626; font-weight: 600; text-decoration: line-through; opacity: 0.7; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="text-gray-800 h-screen flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm p-4 z-10 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+            <div class="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center text-xl shadow-lg">
+                <i class="fa-solid fa-headset"></i>
+            </div>
+            <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 hidden sm:block">
+                Shadowing Master
+            </h1>
+        </div>
+        <div class="flex gap-2 items-center flex-wrap">
+            <button id="openAddModalBtn" class="bg-green-50 text-green-600 border border-green-200 py-2 px-3 rounded-lg text-sm font-semibold hover:bg-green-100 transition-colors flex items-center gap-2">
+                <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">Nova Frase</span>
+            </button>
+            <select id="speedSelect" class="bg-gray-100 border border-gray-200 text-gray-700 py-2 px-3 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer" title="Velocidade de Fala">
+                <option value="0.5">0.5x (Lento)</option>
+                <option value="0.85" selected>0.85x (Treino)</option>
+                <option value="1.0">1.0x (Normal)</option>
+                <option value="1.25">1.25x (Rápido)</option>
+            </select>
+            <select id="langSelect" class="bg-gray-100 border border-gray-200 text-gray-700 py-2 px-3 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                <option value="en">🇺🇸 Inglês</option>
+                <option value="es">🇪🇸 Espanhol</option>
+                <option value="pt">🇧🇷 Português</option>
+            </select>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col md:flex-row overflow-hidden">
+        
+        <!-- Sidebar / Categories -->
+        <aside class="w-full md:w-64 bg-white border-r border-gray-200 flex flex-col h-auto md:h-full overflow-y-auto">
+            <div class="p-4 border-b border-gray-100 bg-gray-50">
+                <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Categorias</h2>
+            </div>
+            <ul id="categoryList" class="p-2 space-y-1">
+                <!-- Preenchido via JS -->
+            </ul>
+        </aside>
+
+        <!-- Shadowing Area -->
+        <section class="flex-1 p-4 md:p-8 flex flex-col items-center justify-center overflow-y-auto bg-gradient-to-br from-gray-50 to-gray-100">
+            
+            <div class="w-full max-w-2xl glass-panel rounded-3xl p-6 md:p-10 flex flex-col relative transition-all duration-300">
+                
+                <!-- Progress Indicator -->
+                <div class="absolute top-6 right-6 text-sm font-medium text-gray-400 bg-gray-100 px-3 py-1 rounded-full hidden md:block" id="progressText">
+                    1 / 10
+                </div>
+
+                <div class="flex flex-col md:flex-row md:items-center gap-3 mb-2 md:pr-20">
+                    <div class="text-blue-600 font-semibold text-sm uppercase tracking-wide flex items-center gap-2 whitespace-nowrap" id="currentCategoryTitle">
+                        <i class="fa-regular fa-folder-open"></i> Saudações
+                    </div>
+                    <select id="phraseSelect" class="bg-white border border-gray-200 text-gray-700 py-1.5 px-2 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer w-full md:max-w-xs truncate shadow-sm" title="Escolha a frase">
+                        <!-- Preenchido via JS -->
+                    </select>
+                </div>
+
+                <!-- Main Phrase -->
+                <div class="min-h-[120px] flex flex-col justify-center my-4">
+                    <h2 id="targetPhrase" class="text-2xl md:text-4xl font-bold text-gray-800 leading-tight mb-4 text-center flex flex-wrap justify-center items-center gap-y-2">
+                        Carregando...
+                    </h2>
+                    <p id="translationPhrase" class="text-gray-500 text-center text-sm md:text-base italic">
+                        Loading...
+                    </p>
+                    
+                    <!-- Explanation Box -->
+                    <div id="explanationBox" class="hidden mt-5 bg-indigo-50 border border-indigo-100 p-4 rounded-xl text-sm text-indigo-900 shadow-sm transition-all text-center max-w-lg mx-auto">
+                        <span class="font-bold text-indigo-700 block mb-1"><i class="fa-solid fa-lightbulb text-yellow-500 mr-1"></i> Contexto & Explicação:</span> 
+                        <span id="explanationText" class="leading-relaxed"></span>
+                    </div>
+                </div>
+
+                <!-- Audio Controls -->
+                <div class="flex justify-center items-center gap-6 my-8">
+                    <button id="prevBtn" class="text-gray-400 hover:text-blue-600 transition-colors text-2xl w-12 h-12 rounded-full hover:bg-blue-50 flex items-center justify-center">
+                        <i class="fa-solid fa-backward-step"></i>
+                    </button>
+                    
+                    <button id="playBtn" class="bg-blue-600 hover:bg-blue-700 text-white w-16 h-16 rounded-full text-2xl shadow-xl shadow-blue-600/30 transition-all hover:scale-105 flex items-center justify-center">
+                        <i class="fa-solid fa-play ml-1"></i>
+                    </button>
+
+                    <button id="nextBtn" class="text-gray-400 hover:text-blue-600 transition-colors text-2xl w-12 h-12 rounded-full hover:bg-blue-50 flex items-center justify-center">
+                        <i class="fa-solid fa-forward-step"></i>
+                    </button>
+                </div>
+
+                <!-- Separation Line -->
+                <div class="w-full h-px bg-gray-200 my-6 relative">
+                    <span class="absolute left-1/2 -translate-x-1/2 -top-3 bg-white px-4 text-xs font-semibold text-gray-400 uppercase tracking-widest rounded-full border border-gray-100 shadow-sm">Sua Vez</span>
+                </div>
+
+                <!-- Recording Area -->
+                <div class="flex flex-col items-center gap-4">
+                    <button id="recordBtn" class="bg-gray-800 hover:bg-gray-900 text-white px-6 py-3 rounded-full font-medium shadow-lg transition-all flex items-center gap-3">
+                        <i class="fa-solid fa-microphone"></i> <span>Aperte para Falar</span>
+                    </button>
+                    <p class="text-xs text-gray-400 text-center max-w-xs">
+                        Ouça a frase, depois clique no microfone e repita. Tentaremos avaliar sua pronúncia.
+                    </p>
+                </div>
+
+                <!-- Results Area (Hidden initially) -->
+        <div id="resultArea" class="hidden mt-6 bg-gray-50 border border-gray-100 rounded-2xl p-4 transition-all">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-sm font-bold text-gray-700">Resultado:</h3>
+                        <span id="scoreBadge" class="px-3 py-1 rounded-full text-xs font-bold text-white bg-blue-500">
+                            0%
+                        </span>
+                    </div>
+                    <div id="feedbackText" class="text-lg text-gray-600 bg-white p-3 rounded-xl border border-gray-100 shadow-inner min-h-[60px] flex items-center">
+                        <!-- Diff text goes here -->
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2 text-center" id="tryAgainText"></p>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <!-- Add Phrase Modal -->
+    <div id="addModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 transform transition-all">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-folder-plus text-blue-600"></i> Adicionar Nova Frase
+            </h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Idioma</label>
+                    <select id="newLang" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="en">Inglês</option>
+                        <option value="es">Espanhol</option>
+                        <option value="pt">Português</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                    <input type="text" id="newCategory" list="categoryOptions" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Ex: Viagem, Saudações...">
+                    <datalist id="categoryOptions"></datalist>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Frase Original</label>
+                    <textarea id="newPhrase" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none" rows="2" placeholder="Digite a frase no idioma estrangeiro..."></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tradução</label>
+                    <textarea id="newTranslation" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none" rows="2" placeholder="Digite a tradução para português..."></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Explicação / Contexto (Opcional)</label>
+                    <textarea id="newExplanation" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none" rows="2" placeholder="Ex: Gíria muito comum usada no dia a dia..."></textarea>
+                </div>
+            </div>
+
+            <p id="addErrorMsg" class="text-red-500 text-sm font-medium mt-3 hidden"><i class="fa-solid fa-circle-exclamation"></i> Por favor, preencha todos os campos!</p>
+
+            <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+                <button id="closeModalBtn" class="px-5 py-2.5 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium transition-colors">Cancelar</button>
+                <button id="savePhraseBtn" class="px-5 py-2.5 text-white bg-blue-600 hover:bg-blue-700 rounded-xl font-medium transition-colors shadow-lg shadow-blue-600/30">Salvar Frase</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Support Message for incompatible browsers -->
+    <div id="unsupportedMsg" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-full shadow-2xl z-50 text-sm font-medium">
+        Seu navegador não suporta reconhecimento de voz nativo. Use o Chrome ou Edge para a funcionalidade completa.
+    </div>
+
+    <script>
+        /**
+         * BANCO DE DADOS DE FRASES EXPANDIDO
+         * Focado nas estruturas essenciais e nas palavras mais comuns para atingir fluência conversacional.
+         */
+        const database = {
+            en: {
+                "Saudações e Básicos": [
+                    { text: "Hello, how are you doing today?", translation: "Olá, como você está hoje?" },
+                    { text: "It's nice to meet you.", translation: "Prazer em conhecê-lo." },
+                    { text: "Could you repeat that, please?", translation: "Você poderia repetir isso, por favor?" },
+                    { text: "I don't understand what you mean.", translation: "Eu não entendo o que você quer dizer." },
+                    { text: "Thank you so much for your help.", translation: "Muito obrigado pela sua ajuda." },
+                    { text: "Have a great day!", translation: "Tenha um ótimo dia!" },
+                    { text: "I'm sorry, I didn't catch your name.", translation: "Desculpe, não entendi seu nome." },
+                    { text: "Can you speak a little bit slower?", translation: "Você pode falar um pouco mais devagar?" },
+                    { text: "It's been a long time since we last spoke.", translation: "Faz muito tempo desde a última vez que nos falamos." },
+                    { text: "I really appreciate it.", translation: "Eu realmente agradeço." }
+                ],
+                "Rotina e Trabalho": [
+                    { text: "What time do you usually wake up?", translation: "A que horas você costuma acordar?" },
+                    { text: "I have a meeting scheduled for three PM.", translation: "Tenho uma reunião marcada para as 15h." },
+                    { text: "Can we reschedule our appointment?", translation: "Podemos remarcar nosso compromisso?" },
+                    { text: "I'll send you an email with the details.", translation: "Vou te enviar um e-mail com os detalhes." },
+                    { text: "How long does it take to get there?", translation: "Quanto tempo leva para chegar lá?" },
+                    { text: "I am currently working on a new project.", translation: "Atualmente estou trabalhando em um novo projeto." },
+                    { text: "Let's take a short break in ten minutes.", translation: "Vamos fazer uma pequena pausa em dez minutos." },
+                    { text: "What are your main responsibilities?", translation: "Quais são suas principais responsabilidades?" },
+                    { text: "I usually commute to work by train.", translation: "Eu costumo ir para o trabalho de trem." },
+                    { text: "We need to finish this by Friday.", translation: "Precisamos terminar isso até sexta-feira." }
+                ],
+                "Viagem e Direções": [
+                    { text: "Excuse me, where is the nearest subway station?", translation: "Com licença, onde fica a estação de metrô mais próxima?" },
+                    { text: "I would like to book a table for two.", translation: "Gostaria de reservar uma mesa para dois." },
+                    { text: "How much does this cost?", translation: "Quanto isso custa?" },
+                    { text: "Can I pay with a credit card?", translation: "Posso pagar com cartão de crédito?" },
+                    { text: "We are looking for a good restaurant around here.", translation: "Estamos procurando um bom restaurante por aqui." },
+                    { text: "Could you show me on the map?", translation: "Você poderia me mostrar no mapa?" },
+                    { text: "What time does the flight leave?", translation: "A que horas o voo sai?" },
+                    { text: "I need to check out of the hotel now.", translation: "Preciso fazer o check-out do hotel agora." },
+                    { text: "Is it within walking distance?", translation: "Fica a uma curta distância a pé?" },
+                    { text: "Where can I pick up my luggage?", translation: "Onde posso pegar minha bagagem?" }
+                ],
+                "Opiniões e Sentimentos": [
+                    { text: "I think that's a brilliant idea.", translation: "Eu acho que essa é uma ideia brilhante." },
+                    { text: "To be honest, I completely disagree.", translation: "Para ser honesto, eu discordo completamente." },
+                    { text: "I'm feeling a little bit tired right now.", translation: "Estou me sentindo um pouco cansado agora." },
+                    { text: "What do you think about this situation?", translation: "O que você acha dessa situação?" },
+                    { text: "I am really excited about the trip next week.", translation: "Estou muito animado com a viagem na próxima semana." },
+                    { text: "It doesn't matter to me either way.", translation: "Para mim tanto faz." },
+                    { text: "I was absolutely terrified when it happened.", translation: "Eu fiquei absolutamente apavorado quando isso aconteceu." },
+                    { text: "She was very disappointed with the results.", translation: "Ela ficou muito decepcionada com os resultados." },
+                    { text: "In my opinion, we should wait.", translation: "Na minha opinião, devemos esperar." },
+                    { text: "I feel much better today, thank you.", translation: "Me sinto muito melhor hoje, obrigado." }
+                ],
+                "Comida e Restaurante": [
+                    { text: "I would like to order the grilled salmon, please.", translation: "Gostaria de pedir o salmão grelhado, por favor." },
+                    { text: "Could we get the check when you have a moment?", translation: "Poderia nos trazer a conta quando tiver um momento?" },
+                    { text: "Are there any vegetarian options on the menu?", translation: "Há opções vegetarianas no menu?" },
+                    { text: "This soup is a little too salty for me.", translation: "Esta sopa está um pouco salgada demais para mim." },
+                    { text: "Can I have a glass of tap water, please?", translation: "Pode me dar um copo de água da torneira, por favor?" },
+                    { text: "What do you recommend for dessert?", translation: "O que você recomenda para a sobremesa?" },
+                    { text: "We have a reservation under the name John.", translation: "Temos uma reserva em nome de John." },
+                    { text: "Everything was delicious, compliments to the chef.", translation: "Tudo estava delicioso, elogios ao chef." }
+                ],
+                "Compras e Dinheiro": [
+                    { text: "Do you have this shirt in a smaller size?", translation: "Você tem esta camisa em um tamanho menor?" },
+                    { text: "I'm just browsing, thank you.", translation: "Estou só olhando, obrigado." },
+                    { text: "Where are the fitting rooms located?", translation: "Onde ficam os provadores?" },
+                    { text: "Is this item on sale right now?", translation: "Este item está em promoção agora?" },
+                    { text: "I would like to return this, please.", translation: "Eu gostaria de devolver isto, por favor." },
+                    { text: "Can you give me a discount?", translation: "Você pode me dar um desconto?" },
+                    { text: "I don't have any cash on me.", translation: "Eu não tenho nenhum dinheiro comigo." }
+                ],
+                "Saúde e Emergências": [
+                    { text: "I need to see a doctor immediately.", translation: "Preciso ver um médico imediatamente." },
+                    { text: "My throat hurts and I have a fever.", translation: "Minha garganta dói e estou com febre." },
+                    { text: "Call the police, there has been an accident.", translation: "Ligue para a polícia, houve um acidente." },
+                    { text: "I am allergic to peanuts and seafood.", translation: "Sou alérgico a amendoim e frutos do mar." },
+                    { text: "Where is the closest pharmacy around here?", translation: "Onde fica a farmácia mais próxima por aqui?" }
+                ],
+                "Lazer e Hobbies": [
+                    { text: "What do you like to do in your free time?", translation: "O que você gosta de fazer no seu tempo livre?" },
+                    { text: "I enjoy reading books and playing the guitar.", translation: "Gosto de ler livros e tocar violão." },
+                    { text: "Have you seen any good movies lately?", translation: "Você viu algum filme bom ultimamente?" },
+                    { text: "I try to work out at the gym three times a week.", translation: "Tento malhar na academia três vezes por semana." },
+                    { text: "Let's go for a walk in the park this afternoon.", translation: "Vamos dar uma volta no parque esta tarde." }
+                ]
+            },
+            es: {
+                "Saludos y Básicos": [
+                    { text: "Hola, ¿cómo estás hoy?", translation: "Olá, como você está hoje?" },
+                    { text: "Mucho gusto en conocerte.", translation: "Prazer em conhecê-lo." },
+                    { text: "¿Podrías repetir eso, por favor?", translation: "Você poderia repetir isso, por favor?" },
+                    { text: "No entiendo lo que quieres decir.", translation: "Eu não entendo o que você quer dizer." },
+                    { text: "Muchas gracias por tu ayuda.", translation: "Muito obrigado pela sua ajuda." },
+                    { text: "¡Que tengas un excelente día!", translation: "Tenha um excelente dia!" },
+                    { text: "Lo siento, no escuché tu nombre.", translation: "Desculpe, não ouvi seu nome." },
+                    { text: "¿Puedes hablar un poco más despacio?", translation: "Você pode falar um pouco mais devagar?" },
+                    { text: "Ha pasado mucho tiempo desde la última vez.", translation: "Passou muito tempo desde a última vez." },
+                    { text: "Te lo agradezco muchísimo.", translation: "Agradeço muitíssimo." }
+                ],
+                "Rutina y Trabajo": [
+                    { text: "¿A qué hora sueles despertarte?", translation: "A que horas você costuma acordar?" },
+                    { text: "Tengo una reunión programada para las tres de la tarde.", translation: "Tenho uma reunião marcada para as 15h." },
+                    { text: "¿Podemos reprogramar nuestra cita?", translation: "Podemos remarcar nosso compromisso?" },
+                    { text: "Te enviaré un correo con los detalles.", translation: "Vou te enviar um e-mail com os detalhes." },
+                    { text: "¿Cuánto tiempo se tarda en llegar allí?", translation: "Quanto tempo leva para chegar lá?" },
+                    { text: "Actualmente estoy trabajando en un nuevo proyecto.", translation: "Atualmente estou trabalhando em um novo projeto." },
+                    { text: "Vamos a tomar un breve descanso en diez minutos.", translation: "Vamos fazer uma pequena pausa em dez minutos." },
+                    { text: "¿Cuáles son tus principales responsabilidades?", translation: "Quais são suas principais responsabilidades?" },
+                    { text: "Normalmente voy al trabajo en tren.", translation: "Normalmente vou para o trabalho de trem." },
+                    { text: "Necesitamos terminar esto para el viernes.", translation: "Precisamos terminar isso até sexta-feira." }
+                ],
+                "Viajes y Direcciones": [
+                    { text: "Disculpe, ¿dónde está la estación de metro más cercana?", translation: "Com licença, onde fica a estação de metrô mais próxima?" },
+                    { text: "Me gustaría reservar una mesa para dos.", translation: "Gostaria de reservar uma mesa para dois." },
+                    { text: "¿Cuánto cuesta esto?", translation: "Quanto isso custa?" },
+                    { text: "¿Puedo pagar con tarjeta de crédito?", translation: "Posso pagar com cartão de crédito?" },
+                    { text: "Estamos buscando un buen restaurante por aquí.", translation: "Estamos procurando um bom restaurante por aqui." },
+                    { text: "¿Podrías mostrármelo en el mapa?", translation: "Poderia me mostrar no mapa?" },
+                    { text: "¿A qué hora sale el vuelo?", translation: "A que horas sai o voo?" },
+                    { text: "Necesito hacer el check-out del hotel ahora.", translation: "Preciso fazer o check-out do hotel agora." },
+                    { text: "¿Se puede ir caminando desde aquí?", translation: "Dá para ir caminhando daqui?" },
+                    { text: "¿Dónde puedo recoger mi equipaje?", translation: "Onde posso pegar minha bagagem?" }
+                ],
+                "Opiniones y Sentimientos": [
+                    { text: "Creo que es una idea brillante.", translation: "Acho que é uma ideia brillante." },
+                    { text: "Para ser honesto, estoy totalmente en desacuerdo.", translation: "Para ser honesto, eu discordo totalmente." },
+                    { text: "Me siento un poco cansado en este momento.", translation: "Estou me sentindo um pouco cansado neste momento." },
+                    { text: "¿Qué opinas sobre esta situación?", translation: "O que você acha dessa situação?" },
+                    { text: "Estoy muy emocionado por el viaje de la próxima semana.", translation: "Estou muito animado com a viagem na próxima semana." },
+                    { text: "No me importa de ninguna manera.", translation: "Não me importo de forma alguma / Para mim tanto faz." },
+                    { text: "Estaba absolutamente aterrorizado cuando sucedió.", translation: "Fiquei absolutamente aterrorizado quando aconteceu." },
+                    { text: "Ella estaba muy decepcionada con los resultados.", translation: "Ela ficou muito decepcionada com os resultados." },
+                    { text: "En mi opinión, deberíamos esperar.", translation: "Na minha opinião, deveríamos esperar." },
+                    { text: "Me siento mucho mejor hoy, gracias.", translation: "Me sinto muito melhor hoje, obrigado." }
+                ],
+                "Comida y Restaurante": [
+                    { text: "Me gustaría pedir el salmón a la parrilla, por favor.", translation: "Gostaria de pedir o salmão grelhado, por favor." },
+                    { text: "¿Podría traernos la cuenta cuando tenga un momento?", translation: "Poderia nos trazer a conta quando tiver um momento?" },
+                    { text: "¿Tienen alguna opción vegetariana en el menú?", translation: "Têm alguma opção vegetariana no menu?" },
+                    { text: "Esta sopa está un poco demasiado salada para mí.", translation: "Esta sopa está um pouco salgada demais para mim." },
+                    { text: "¿Me puede traer un vaso de agua del grifo, por favor?", translation: "Pode me trazer um copo de água da torneira, por favor?" },
+                    { text: "¿Qué me recomienda para el postre?", translation: "O que me recomenda para a sobremesa?" },
+                    { text: "Tenemos una reserva a nombre de Carlos.", translation: "Temos uma reserva em nome de Carlos." },
+                    { text: "Todo estuvo delicioso, mis felicitaciones al chef.", translation: "Tudo estava delicioso, meus parabéns ao chef." }
+                ],
+                "Compras y Dinero": [
+                    { text: "¿Tienes esta camisa en una talla más pequeña?", translation: "Você tem esta camisa em um tamanho menor?" },
+                    { text: "Solo estoy mirando, gracias.", translation: "Só estou olhando, obrigado." },
+                    { text: "¿Dónde están los probadores?", translation: "Onde ficam os provadores?" },
+                    { text: "¿Este artículo está en oferta ahora mismo?", translation: "Este item está em oferta agora?" },
+                    { text: "Me gustaría devolver esto, por favor.", translation: "Gostaria de devolver isto, por favor." },
+                    { text: "¿Me puedes hacer un descuento?", translation: "Você pode me dar um desconto?" },
+                    { text: "No llevo dinero en efectivo conmigo.", translation: "Não levo dinheiro em espécie comigo." }
+                ],
+                "Salud y Emergencias": [
+                    { text: "Necesito ver a un médico de inmediato.", translation: "Preciso ver um médico imediatamente." },
+                    { text: "Me duele la garganta y tengo fiebre.", translation: "Dói-me a garganta e tenho febre." },
+                    { text: "Llama a la policía, ha habido un accidente.", translation: "Ligue para a polícia, houve um acidente." },
+                    { text: "Soy alérgico a los cacahuetes y los mariscos.", translation: "Sou alérgico a amendoim e frutos do mar." },
+                    { text: "¿Dónde está la farmacia más cercana por aquí?", translation: "Onde fica a farmácia mais próxima por aqui?" }
+                ],
+                "Ocio y Pasatiempos": [
+                    { text: "¿Qué te gusta hacer en tu tiempo libre?", translation: "O que você gosta de fazer no seu tempo livre?" },
+                    { text: "Disfruto leyendo libros y tocando la guitarra.", translation: "Gosto de ler livros e tocar violão." },
+                    { text: "¿Has visto alguna buena película últimamente?", translation: "Você viu algum filme bom ultimamente?" },
+                    { text: "Trato de hacer ejercicio en el gimnasio tres veces a la semana.", translation: "Tento me exercitar na academia três vezes por semana." },
+                    { text: "Vamos a dar un paseo por el parque esta tarde.", translation: "Vamos dar uma volta pelo parque esta tarde." }
+                ]
+            },
+            pt: {
+                "Saudações e Dia a Dia": [
+                    { text: "E aí, cara, tudo beleza?", translation: "Hey man, is everything cool?", explanation: "'E aí' é a saudação informal mais usada no Brasil (Equivalente a 'What's up'). 'Beleza' literalmente significa 'beauty', mas é usado para perguntar se está tudo bem." },
+                    { text: "Nossa, que saudade de você!", translation: "Wow, I missed you so much!", explanation: "'Nossa' é uma contração de 'Nossa Senhora', usada o tempo todo para expressar surpresa. 'Saudade' é uma palavra única da língua portuguesa que denota um sentimento profundo de falta." },
+                    { text: "Fica tranquilo, vai dar tudo certo.", translation: "Don't worry, everything will be fine.", explanation: "'Dar certo' é uma expressão verbal ubíqua no Brasil que significa 'to work out' ou 'to be successful'. É usada o tempo todo." },
+                    { text: "Você pode repetir, por favor? Não entendi nada.", translation: "Can you repeat, please? I didn't understand anything.", explanation: "O duplo negativo ('Não' e 'nada' na mesma frase) é a estrutura gramatical padrão em português para ênfase, ao contrário do inglês que evita." },
+                    { text: "Com licença, sabe me dizer que horas são?", translation: "Excuse me, do you know what time it is?", explanation: "Usamos 'saber me dizer' (sabe me dizer) como uma fórmula educada e indireta para pedir informações a estranhos na rua." }
+                ],
+                "Expressões e Gírias": [
+                    { text: "Ele meteu o pé e foi embora cedo.", translation: "He left early.", explanation: "'Meter o pé' (literalmente: put the foot) é uma gíria extremamente comum no Brasil que significa ir embora de um lugar rapidamente ou fugir." },
+                    { text: "Isso aí é um baita de um abacaxi para descascar.", translation: "That is a huge problem to solve.", explanation: "'Abacaxi' (pineapple) ou 'pepino' (cucumber) são metáforas clássicas na cultura brasileira para descrever um problema difícil ou uma situação burocrática complicada." },
+                    { text: "Tô morrendo de fome, vamos bater um prato?", translation: "I'm starving, let's go eat?", explanation: "'Bater um prato' é uma forma coloquial e descontraída de dizer 'comer uma refeição farta'." },
+                    { text: "Nossa, ele viajou na maionese agora.", translation: "Wow, he completely lost the plot / daydreamed just now.", explanation: "'Viajar na maionese' (literalmente 'to travel in the mayonnaise') significa falar algo sem sentido absurdo, ou estar completamente distraído no mundo da lua." },
+                    { text: "Fiquei de cara com o que aconteceu ontem.", translation: "I was shocked with what happened yesterday.", explanation: "'Ficar de cara' significa ficar muito chocado, surpreso (positiva ou negativamente) ou decepcionado com alguma coisa." }
+                ],
+                "Trabalho e Negócios": [
+                    { text: "Podemos antecipar a nossa reunião para as duas da tarde?", translation: "Can we move our meeting forward to two PM?", explanation: "'Antecipar' é o verbo oposto a adiar (postpone), muito usado no ambiente corporativo brasileiro para trazer um evento para um horário ou dia mais cedo." },
+                    { text: "Vou te encaminhar o e-mail com a pauta de hoje.", translation: "I will forward you the email with today's agenda.", explanation: "'Encaminhar' significa forward. 'Pauta' refere-se aos tópicos que serão discutidos, a agenda da reunião." },
+                    { text: "Precisamos bater a meta até o final do trimestre.", translation: "We need to hit the target by the end of the quarter.", explanation: "'Bater a meta' é o jargão padrão para atingir os objetivos de vendas ou produtividade dentro de uma empresa." },
+                    { text: "Atualmente, estou liderando o setor de marketing.", translation: "Currently, I am leading the marketing department.", explanation: "Falso Cognato de Ouro: 'Atualmente' significa 'currently/nowadays' e descreve tempo. NÃO significa 'actually' (na verdade)." }
+                ],
+                "Restaurante e Lazer": [
+                    { text: "Amigo, por favor, me traz a conta.", translation: "Friend/Waiter, please bring me the bill.", explanation: "No Brasil, é muito comum e aceitável chamar garçons informais de 'Amigo' ou 'Amigão' como sinal de cordialidade e simpatia." },
+                    { text: "Tem alguma opção sem glúten no cardápio?", translation: "Is there any gluten-free option on the menu?", explanation: "'Cardápio' é a palavra para Menu. Na fala cotidiana do Brasil, o verbo 'Ter' substitui quase completamente o verbo 'Haver' para indicar existência ('Tem' = There is)." },
+                    { text: "Vamos dar uma volta no calçadão mais tarde.", translation: "Let's take a walk on the boardwalk later.", explanation: "'Dar uma volta' é passear sem rumo. 'Calçadão' é o pavimento largo de pedras portuguesas à beira-mar, típico da cultura praiana (como em Copacabana)." },
+                    { text: "Pode embalar pra viagem, por favor?", translation: "Can you pack it to go, please?", explanation: "'Pra viagem' (for travel) é a frase exata usada quando você compra comida para levar, ou pede para embrulharem o que sobrou no restaurante." }
+                ]
+            }
+        };
+
+        // Carrega frases salvas do LocalStorage e mescla com as originais
+        const savedData = localStorage.getItem('shadowingDatabase');
+        if (savedData) {
+            try {
+                const parsed = JSON.parse(savedData);
+                for (const lang in parsed) {
+                    for (const cat in parsed[lang]) {
+                        if (!database[lang][cat]) database[lang][cat] = [];
+                        // Adiciona apenas as que não existem para evitar duplicações com o DB base
+                        parsed[lang][cat].forEach(savedPhrase => {
+                            if (!database[lang][cat].find(p => p.text === savedPhrase.text)) {
+                                database[lang][cat].push(savedPhrase);
+                            }
+                        });
+                    }
+                }
+            } catch (e) { console.error("Erro ao carregar dados salvos", e); }
+        }
+
+        // Estado da Aplicação
+        let currentLang = 'en';
+        let currentCategory = Object.keys(database[currentLang])[0];
+        let currentPhraseIndex = 0;
+        let phrasesList = [];
+        let isRecording = false;
+
+        // Variável para armazenar o objeto de áudio atual (Google TTS)
+        let currentAudio = null;
+
+        // API de Reconhecimento de Voz
+        let recognition;
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+        } else {
+            document.getElementById('unsupportedMsg').classList.remove('hidden');
+            document.getElementById('recordBtn').disabled = true;
+            document.getElementById('recordBtn').classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        // Elementos DOM
+        const langSelect = document.getElementById('langSelect');
+        const speedSelect = document.getElementById('speedSelect');
+        const categoryList = document.getElementById('categoryList');
+        const currentCategoryTitle = document.getElementById('currentCategoryTitle');
+        const targetPhraseEl = document.getElementById('targetPhrase');
+        const translationPhraseEl = document.getElementById('translationPhrase');
+        const progressText = document.getElementById('progressText');
+        const phraseSelect = document.getElementById('phraseSelect');
+        
+        const playBtn = document.getElementById('playBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const recordBtn = document.getElementById('recordBtn');
+        
+        const resultArea = document.getElementById('resultArea');
+        const feedbackText = document.getElementById('feedbackText');
+        const scoreBadge = document.getElementById('scoreBadge');
+        const tryAgainText = document.getElementById('tryAgainText');
+
+        // Modal Elements
+        const addModal = document.getElementById('addModal');
+        const openAddModalBtn = document.getElementById('openAddModalBtn');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const savePhraseBtn = document.getElementById('savePhraseBtn');
+        const newLang = document.getElementById('newLang');
+        const categoryOptions = document.getElementById('categoryOptions');
+        const addErrorMsg = document.getElementById('addErrorMsg');
+
+        // Inicialização
+        function init() {
+            loadCategories();
+            loadPhrase();
+            setupEventListeners();
+        }
+
+        function loadCategories() {
+            categoryList.innerHTML = '';
+            const categories = Object.keys(database[currentLang]);
+            
+            // Valida se a categoria atual existe no novo idioma
+            if (!categories.includes(currentCategory)) {
+                // Tenta encontrar uma categoria com índice similar, ou pega a primeira
+                currentCategory = categories[0]; 
+            }
+
+            categories.forEach(cat => {
+                const li = document.createElement('li');
+                const isSelected = cat === currentCategory;
+                
+                li.className = `cursor-pointer px-4 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-between group ${isSelected ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`;
+                
+                li.innerHTML = `
+                    <span>${cat}</span>
+                    <span class="text-xs ${isSelected ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'} bg-white px-2 py-0.5 rounded-full shadow-sm">
+                        ${database[currentLang][cat].length}
+                    </span>
+                `;
+                
+                li.onclick = () => {
+                    currentCategory = cat;
+                    currentPhraseIndex = 0;
+                    loadCategories(); // Re-render para atualizar o estilo "selected"
+                    loadPhrase();
+                };
+                categoryList.appendChild(li);
+            });
+
+            phrasesList = database[currentLang][currentCategory];
+            currentCategoryTitle.innerHTML = `<i class="fa-regular fa-folder-open"></i> ${currentCategory}`;
+            populatePhraseSelect();
+        }
+
+        function populatePhraseSelect() {
+            if(!phraseSelect) return;
+            phraseSelect.innerHTML = '';
+            phrasesList.forEach((phrase, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${index + 1}. ${phrase.text}`;
+                phraseSelect.appendChild(option);
+            });
+        }
+
+        function loadPhrase() {
+            const currentPhrase = phrasesList[currentPhraseIndex];
+            
+            // Renderiza as palavras da frase como elementos clicáveis para pronúncia individual
+            targetPhraseEl.innerHTML = '';
+            const parts = currentPhrase.text.split(/(\s+)/); // Divide mantendo os espaços
+            
+            parts.forEach(part => {
+                if (part.trim() === '') {
+                    targetPhraseEl.appendChild(document.createTextNode(part)); // É apenas um espaço
+                } else {
+                    const span = document.createElement('span');
+                    span.textContent = part;
+                    span.className = 'cursor-pointer hover:text-blue-600 hover:bg-blue-50 rounded px-1 py-0.5 transition-colors border-b-2 border-transparent hover:border-blue-400';
+                    span.title = "Clique para ouvir a pronúncia desta palavra";
+                    span.onclick = () => speakWord(part);
+                    targetPhraseEl.appendChild(span);
+                }
+            });
+
+            translationPhraseEl.textContent = currentPhrase.translation;
+            
+            // Lida com a explicação
+            const explanationBox = document.getElementById('explanationBox');
+            const explanationText = document.getElementById('explanationText');
+            if (currentPhrase.explanation) {
+                explanationBox.classList.remove('hidden');
+                explanationText.textContent = currentPhrase.explanation;
+            } else {
+                explanationBox.classList.add('hidden');
+            }
+
+            progressText.textContent = `${currentPhraseIndex + 1} / ${phrasesList.length}`;
+            if(phraseSelect) phraseSelect.value = currentPhraseIndex;
+            
+            // Esconde resultados anteriores
+            resultArea.classList.add('hidden');
+            
+            // Reseta ícone de play e para o áudio se estiver tocando
+            playBtn.innerHTML = '<i class="fa-solid fa-play ml-1"></i>';
+            stopAudio();
+
+            // Resetar erros e gravar
+            isRecording = false;
+            if(recognition) recognition.abort();
+            resetRecordButton();
+
+            // Controle de botões prev/next
+            prevBtn.disabled = currentPhraseIndex === 0;
+            prevBtn.style.opacity = currentPhraseIndex === 0 ? '0.3' : '1';
+            nextBtn.disabled = currentPhraseIndex === phrasesList.length - 1;
+            nextBtn.style.opacity = currentPhraseIndex === phrasesList.length - 1 ? '0.3' : '1';
+        }
+
+        // Função para parar qualquer áudio tocando atualmente
+        function stopAudio() {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                currentAudio = null;
+            }
+            if (window.speechSynthesis && window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
+            
+            // Reseta os botões caso tenham ficado presos
+            playBtn.innerHTML = '<i class="fa-solid fa-play ml-1"></i>';
+            playBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+            playBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+        }
+
+        // Tocar áudio com suporte de alta qualidade (Google TTS) para TODOS os idiomas
+        function playAudio() {
+            // Se já tem um áudio tocando e não está pausado, o clique funciona como STOP
+            if ((currentAudio && !currentAudio.paused) || (window.speechSynthesis && window.speechSynthesis.speaking)) {
+                stopAudio();
+                return;
+            }
+
+            const text = phrasesList[currentPhraseIndex].text;
+            const speed = parseFloat(speedSelect.value); // 0.5 (lento) a 1.25 (rápido)
+            
+            // Define o código do idioma para o banco de voz
+            let langCode = 'en-US';
+            if (currentLang === 'es') langCode = 'es-ES';
+            if (currentLang === 'pt') langCode = 'pt-BR';
+
+            // Utiliza o Google Translate TTS para garantir voz humana/natural em todos
+            const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${langCode}&client=tw-ob&q=${encodeURIComponent(text)}`;
+            
+            currentAudio = new Audio(url);
+            currentAudio.playbackRate = speed;
+            currentAudio.preservesPitch = true;
+
+            currentAudio.onplay = () => {
+                playBtn.innerHTML = '<i class="fa-solid fa-stop"></i>';
+                playBtn.classList.replace('bg-blue-600', 'bg-red-500');
+                playBtn.classList.replace('hover:bg-blue-700', 'hover:bg-red-600');
+            };
+
+            currentAudio.onended = () => {
+                playBtn.innerHTML = '<i class="fa-solid fa-play ml-1"></i>';
+                playBtn.classList.replace('bg-red-500', 'bg-blue-600');
+                playBtn.classList.replace('hover:bg-red-600', 'hover:bg-blue-700');
+                currentAudio = null;
+            };
+
+            currentAudio.onerror = () => {
+                console.error("Falha ao carregar o áudio do Google TTS.");
+                playBtn.innerHTML = '<i class="fa-solid fa-play ml-1"></i>';
+                playBtn.classList.replace('bg-red-500', 'bg-blue-600');
+                playBtn.classList.replace('hover:bg-red-600', 'hover:bg-blue-700');
+                currentAudio = null;
+            };
+
+            currentAudio.play();
+        }
+
+        // Função: Ler apenas uma palavra isolada
+        function speakWord(word) {
+            stopAudio(); // Interrompe o áudio atual
+            
+            // Remove pontuações
+            const cleanWord = word.replace(/[.,!?¿¡;:]/g, '');
+            if(!cleanWord) return;
+
+            let langCode = 'en-US';
+            if (currentLang === 'es') langCode = 'es-ES';
+            if (currentLang === 'pt') langCode = 'pt-BR';
+
+            // Usa o mesmo banco de voz natural para a pronúncia isolada das palavras
+            const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${langCode}&client=tw-ob&q=${encodeURIComponent(cleanWord)}`;
+            
+            const wordAudio = new Audio(url);
+            wordAudio.playbackRate = 0.85; 
+            wordAudio.play();
+        }
+
+        // Lógica de Reconhecimento e Comparação
+        function toggleRecording() {
+            if (!recognition) return;
+
+            if (isRecording) {
+                recognition.stop();
+                return;
+            }
+
+            let langCode = 'en-US';
+            if (currentLang === 'es') langCode = 'es-ES';
+            if (currentLang === 'pt') langCode = 'pt-BR';
+            
+            recognition.lang = langCode;
+            
+            recognition.onstart = () => {
+                isRecording = true;
+                recordBtn.classList.add('mic-pulse', 'bg-red-600', 'hover:bg-red-700');
+                recordBtn.classList.remove('bg-gray-800', 'hover:bg-gray-900');
+                recordBtn.innerHTML = '<i class="fa-solid fa-stop"></i> <span>Ouvindo...</span>';
+                resultArea.classList.add('hidden');
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                compareAndShowResult(phrasesList[currentPhraseIndex].text, transcript);
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech recognition error", event.error);
+                resetRecordButton();
+                if(event.error === 'not-allowed') {
+                    alert('Por favor, permita o acesso ao microfone para usar esta funcionalidade.');
+                }
+            };
+
+            recognition.onend = () => {
+                isRecording = false;
+                resetRecordButton();
+            };
+
+            try {
+                recognition.start();
+            } catch (e) {
+                console.error(e);
+                isRecording = false;
+                resetRecordButton();
+            }
+        }
+
+        function resetRecordButton() {
+            recordBtn.classList.remove('mic-pulse', 'bg-red-600', 'hover:bg-red-700');
+            recordBtn.classList.add('bg-gray-800', 'hover:bg-gray-900');
+            recordBtn.innerHTML = '<i class="fa-solid fa-microphone"></i> <span>Aperte para Falar</span>';
+        }
+
+        // Função principal de Feedback
+        function compareAndShowResult(originalText, spokenText) {
+            // Normalização de string para comparação mais justa (remove pontuação e ignora case)
+            const normalize = (str) => str.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?¿¡]/g, "").trim();
+            
+            const originalWords = normalize(originalText).split(/\s+/);
+            const spokenWords = normalize(spokenText).split(/\s+/);
+
+            let matchCount = 0;
+            let displayHTML = '';
+
+            // Algoritmo simples de matching palavra por palavra
+            // Verifica se a palavra falada existe perto da posição da palavra original
+            originalWords.forEach((origWord) => {
+                const foundIndex = spokenWords.indexOf(origWord);
+                
+                if (foundIndex !== -1) {
+                    matchCount++;
+                    displayHTML += `<span class="word-match mr-1">${origWord}</span> `;
+                    // Remove a palavra encontrada para não contar em duplicidade caso a palavra se repita
+                    spokenWords.splice(foundIndex, 1);
+                } else {
+                    displayHTML += `<span class="word-miss mr-1">${origWord}</span> `;
+                }
+            });
+
+            // Adiciona palavras extras que o usuário falou e não estavam na original
+            spokenWords.forEach(extraWord => {
+                displayHTML += `<span class="text-orange-500 line-through text-sm mr-1 opacity-70" title="Palavra extra">${extraWord}</span> `;
+            });
+
+            const accuracy = Math.round((matchCount / originalWords.length) * 100);
+
+            // Atualiza UI
+            resultArea.classList.remove('hidden');
+            feedbackText.innerHTML = displayHTML;
+            scoreBadge.textContent = `${accuracy}% Precisão`;
+
+            // Cores baseadas na nota
+            scoreBadge.className = 'px-3 py-1 rounded-full text-xs font-bold text-white shadow-sm ';
+            if (accuracy >= 80) {
+                scoreBadge.classList.add('bg-green-500');
+                tryAgainText.textContent = "Excelente pronúncia! Continue assim.";
+                tryAgainText.className = "text-xs mt-2 text-center text-green-600 font-medium";
+            } else if (accuracy >= 50) {
+                scoreBadge.classList.add('bg-yellow-500');
+                tryAgainText.textContent = "Bom trabalho, mas pode melhorar. Tente novamente!";
+                tryAgainText.className = "text-xs mt-2 text-center text-yellow-600 font-medium";
+            } else {
+                scoreBadge.classList.add('bg-red-500');
+                tryAgainText.textContent = "Não conseguimos entender bem. Ouça a pronúncia e tente de novo.";
+                tryAgainText.className = "text-xs mt-2 text-center text-red-500 font-medium";
+            }
+        }
+
+        function setupEventListeners() {
+            phraseSelect.addEventListener('change', (e) => {
+                currentPhraseIndex = parseInt(e.target.value);
+                loadPhrase();
+            });
+
+            langSelect.addEventListener('change', (e) => {
+                currentLang = e.target.value;
+                loadCategories();
+                loadPhrase();
+            });
+
+            speedSelect.addEventListener('change', () => {
+                // Se estiver tocando, atualiza a velocidade em tempo real se suportado
+                if (currentAudio && !currentAudio.paused) {
+                   currentAudio.playbackRate = parseFloat(speedSelect.value);
+                }
+            });
+
+            playBtn.addEventListener('click', playAudio);
+            
+            prevBtn.addEventListener('click', () => {
+                if (currentPhraseIndex > 0) {
+                    currentPhraseIndex--;
+                    loadPhrase();
+                }
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (currentPhraseIndex < phrasesList.length - 1) {
+                    currentPhraseIndex++;
+                    loadPhrase();
+                }
+            });
+
+            recordBtn.addEventListener('click', toggleRecording);
+            
+            // Garantir que as vozes carreguem (Chrome tem um delay assíncrono para carregar vozes na primeira vez)
+            if (speechSynthesis.onvoiceschanged !== undefined) {
+                speechSynthesis.onvoiceschanged = () => {}; // Força o load
+            }
+
+            // Lógica do Modal de Adição de Frases
+            openAddModalBtn.addEventListener('click', () => {
+                newLang.value = currentLang;
+                updateCategoryDatalist();
+                addModal.classList.remove('hidden');
+                addErrorMsg.classList.add('hidden');
+            });
+
+            closeModalBtn.addEventListener('click', () => {
+                addModal.classList.add('hidden');
+                clearModalFields();
+            });
+
+            newLang.addEventListener('change', updateCategoryDatalist);
+
+            savePhraseBtn.addEventListener('click', () => {
+                const lang = newLang.value;
+                const cat = document.getElementById('newCategory').value.trim();
+                const text = document.getElementById('newPhrase').value.trim();
+                const translation = document.getElementById('newTranslation').value.trim();
+                const explanation = document.getElementById('newExplanation').value.trim();
+                
+                if(!cat || !text || !translation) {
+                    addErrorMsg.classList.remove('hidden');
+                    return;
+                }
+                
+                // Salva no banco em memória
+                if(!database[lang][cat]) database[lang][cat] = [];
+                
+                const newPhraseObj = { text, translation };
+                if (explanation) newPhraseObj.explanation = explanation;
+                
+                database[lang][cat].push(newPhraseObj);
+                
+                // Salva no LocalStorage
+                localStorage.setItem('shadowingDatabase', JSON.stringify(database));
+                
+                addModal.classList.add('hidden');
+                clearModalFields();
+                addErrorMsg.classList.add('hidden');
+                
+                // Atualiza a tela se salvou no idioma atual
+                if(currentLang === lang) {
+                    currentCategory = cat;
+                    loadCategories();
+                    currentPhraseIndex = database[lang][cat].length - 1; // Pula para a recém criada
+                    loadPhrase();
+                }
+            });
+        }
+
+        function updateCategoryDatalist() {
+            const lang = newLang.value;
+            categoryOptions.innerHTML = '';
+            Object.keys(database[lang]).forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                categoryOptions.appendChild(option);
+            });
+        }
+
+        function clearModalFields() {
+            document.getElementById('newCategory').value = '';
+            document.getElementById('newPhrase').value = '';
+            document.getElementById('newTranslation').value = '';
+            document.getElementById('newExplanation').value = '';
+        }
+
+        // Run
+        window.addEventListener('DOMContentLoaded', init);
+
+    </script>
+</body>
+</html>
